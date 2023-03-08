@@ -76,7 +76,15 @@ public class ConstantPropagation extends
      */
     public Value meetValue(Value v1, Value v2) {
         // TODO - finish me
-        return null;
+        if (v1.isConstant() && v2.isConstant()) {
+            return v1.getConstant() == v2.getConstant() ? v1 : Value.getNAC();
+        } else if (v1.isUndef()) {
+            return v2;
+        } else if (v2.isUndef()) {
+            return v1;
+        } else {
+            return Value.getNAC();
+        }
     }
 
     @Override
