@@ -26,14 +26,7 @@ import pascal.taie.analysis.dataflow.analysis.AbstractDataflowAnalysis;
 import pascal.taie.analysis.graph.cfg.CFG;
 import pascal.taie.config.AnalysisConfig;
 import pascal.taie.ir.IR;
-import pascal.taie.ir.exp.ArithmeticExp;
-import pascal.taie.ir.exp.BinaryExp;
-import pascal.taie.ir.exp.BitwiseExp;
-import pascal.taie.ir.exp.ConditionExp;
-import pascal.taie.ir.exp.Exp;
-import pascal.taie.ir.exp.IntLiteral;
-import pascal.taie.ir.exp.ShiftExp;
-import pascal.taie.ir.exp.Var;
+import pascal.taie.ir.exp.*;
 import pascal.taie.ir.stmt.DefinitionStmt;
 import pascal.taie.ir.stmt.Stmt;
 import pascal.taie.language.type.PrimitiveType;
@@ -90,7 +83,20 @@ public class ConstantPropagation extends
     @Override
     public boolean transferNode(Stmt stmt, CPFact in, CPFact out) {
         // TODO - finish me
-        return false;
+        if (stmt instanceof DefinitionStmt<?, ?>) {
+            RValue exp = ((DefinitionStmt<?, ?>) stmt).getRValue();
+            Var var = (Var) ((DefinitionStmt<?, ?>) stmt).getLValue();
+            out.copyFrom(in);
+            out.remove(var);
+            switch (exp.getType().getName()) {
+                case "Var" -> out.update(var, in.get((Var) exp));
+                case "IntLiteral" -> out.update(var, Value.makeConstant(((IntLiteral) exp).getValue()));
+                case "BinaryExp" -> out.update(var, evaluate(exp, in));
+            }
+            return !in.equals(out);
+        } else {
+            return out.copyFrom(in);
+        }
     }
 
     /**
