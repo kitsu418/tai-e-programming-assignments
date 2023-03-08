@@ -128,13 +128,15 @@ public class ConstantPropagation extends
                     IntLiteral literal1 = (IntLiteral) operand1.getTempConstValue();
                     IntLiteral literal2 = (IntLiteral) operand1.getTempConstValue();
                     if (exp instanceof ArithmeticExp) {
-                        return Value.makeConstant(switch (((ArithmeticExp) exp).getOperator()) {
-                            case ADD -> literal1.getValue() + literal2.getValue();
-                            case SUB -> literal1.getValue() - literal2.getValue();
-                            case MUL -> literal1.getValue() * literal2.getValue();
-                            case DIV -> literal1.getValue() / literal2.getValue();
-                            case REM -> literal1.getValue() % literal2.getValue();
-                        });
+                        return switch (((ArithmeticExp) exp).getOperator()) {
+                            case ADD -> Value.makeConstant(literal1.getValue() + literal2.getValue());
+                            case SUB -> Value.makeConstant(literal1.getValue() - literal2.getValue());
+                            case MUL -> Value.makeConstant(literal1.getValue() * literal2.getValue());
+                            case DIV ->
+                                    literal2.getValue() == 0 ? Value.getUndef() : Value.makeConstant(literal1.getValue() / literal2.getValue());
+                            case REM ->
+                                    literal2.getValue() == 0 ? Value.getUndef() : Value.makeConstant(literal1.getValue() % literal2.getValue());
+                        };
                     } else if (exp instanceof ConditionExp) {
                         return Value.makeConstant(switch (((ConditionExp) exp).getOperator()) {
                             case EQ -> literal1.getValue() == literal2.getValue();
