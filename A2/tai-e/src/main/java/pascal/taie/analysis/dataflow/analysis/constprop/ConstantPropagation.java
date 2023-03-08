@@ -58,7 +58,7 @@ public class ConstantPropagation extends
     @Override
     public CPFact newInitialFact() {
         // TODO - finish me
-        return null;
+        return new CPFact();
     }
 
     @Override
