@@ -33,6 +33,8 @@ import pascal.taie.language.type.PrimitiveType;
 import pascal.taie.language.type.Type;
 import pascal.taie.util.AnalysisException;
 
+import java.util.Map;
+
 public class ConstantPropagation extends
         AbstractDataflowAnalysis<Stmt, CPFact> {
 
@@ -62,6 +64,10 @@ public class ConstantPropagation extends
     @Override
     public void meetInto(CPFact fact, CPFact target) {
         // TODO - finish me
+        CPFact target_backup = target.copy();
+        target_backup.forEach((var, value) -> {
+            target.update(var, meetValue(value, fact.get(var)));
+        });
     }
 
     /**
