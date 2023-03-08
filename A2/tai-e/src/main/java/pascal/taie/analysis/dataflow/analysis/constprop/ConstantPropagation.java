@@ -112,6 +112,59 @@ public class ConstantPropagation extends
      */
     public static Value evaluate(Exp exp, CPFact in) {
         // TODO - finish me
-        return null;
+        if (exp instanceof BinaryExp) {
+            Var operand1 = ((BinaryExp) exp).getOperand1();
+            Var operand2 = ((BinaryExp) exp).getOperand2();
+            if (canHoldInt(operand1) && canHoldInt(operand2)) {
+                if (in.get(operand1).isConstant() && in.get(operand2).isConstant()) {
+                    IntLiteral literal1 = (IntLiteral) operand1.getTempConstValue();
+                    IntLiteral literal2 = (IntLiteral) operand1.getTempConstValue();
+                    if (exp instanceof ArithmeticExp) {
+                        return Value.makeConstant(switch (((ArithmeticExp) exp).getOperator()) {
+                            case ADD -> literal1.getValue() + literal2.getValue();
+                            case SUB -> literal1.getValue() - literal2.getValue();
+                            case MUL -> literal1.getValue() * literal2.getValue();
+                            case DIV -> literal1.getValue() / literal2.getValue();
+                            case REM -> literal1.getValue() % literal2.getValue();
+                        });
+                    } else if (exp instanceof ConditionExp) {
+                        return Value.makeConstant(switch (((ConditionExp) exp).getOperator()) {
+                            case EQ -> literal1.getValue() == literal2.getValue();
+                            case GE -> literal1.getValue() >= literal2.getValue();
+                            case GT -> literal1.getValue() > literal2.getValue();
+                            case LE -> literal1.getValue() <= literal2.getValue();
+                            case LT -> literal1.getValue() < literal2.getValue();
+                            case NE -> literal1.getValue() != literal2.getValue();
+                        } ? 1 : 0);
+                    } else if (exp instanceof ShiftExp) {
+                        return Value.makeConstant(switch (((ShiftExp) exp).getOperator()) {
+                            case SHL -> literal1.getValue() << literal2.getValue();
+                            case SHR -> literal1.getValue() >> literal2.getValue();
+                            case USHR -> literal1.getValue() >>> literal2.getValue();
+                        });
+                    } else if (exp instanceof BitwiseExp) {
+                        return Value.makeConstant(switch (((BitwiseExp) exp).getOperator()) {
+                            case OR -> literal1.getValue() | literal2.getValue();
+                            case AND -> literal1.getValue() & literal2.getValue();
+                            case XOR -> literal1.getValue() ^ literal2.getValue();
+                        });
+                    } else {
+                        return Value.getNAC();
+                    }
+                } else if (in.get(operand1).isNAC() && in.get(operand2).isNAC()) {
+                    return Value.getNAC();
+                } else {
+                    return Value.getUndef();
+                }
+            } else {
+                return Value.getNAC();
+            }
+        } else if (exp instanceof Var) {
+            return in.get((Var) exp);
+        } else if (exp instanceof IntLiteral) {
+            return Value.makeConstant(((IntLiteral) exp).getValue());
+        } else {
+            return Value.getNAC();
+        }
     }
 }
