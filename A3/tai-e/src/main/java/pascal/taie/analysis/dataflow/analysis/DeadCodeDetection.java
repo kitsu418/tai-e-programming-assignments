@@ -58,7 +58,6 @@ public class DeadCodeDetection extends MethodAnalysis {
                 ir.getResult(LiveVariableAnalysis.ID);
         // keep statements (dead code) sorted in the resulting set
         Set<Stmt> deadCode = new TreeSet<>(Comparator.comparing(Stmt::getIndex));
-        // TODO - finish me
         // Your task is to recognize dead code in ir and add it to deadCode
         for (Stmt stmt : cfg.getNodes()) {
             System.out.printf("#%d: %s, in: %s, out: %s\n", stmt.getLineNumber(), stmt, liveVars.getInFact(stmt), liveVars.getOutFact(stmt));
@@ -85,6 +84,12 @@ public class DeadCodeDetection extends MethodAnalysis {
                             }
                         }
                     });
+                } else {
+                    cfg.getSuccsOf(stmt).forEach(successor -> {
+                        if (!visited_node.contains(successor) && !worklist.contains(successor)) {
+                            worklist.offer(successor);
+                        }
+                    });
                 }
                 // unreachable code, switch case
             } else if (stmt instanceof SwitchStmt s) {
@@ -106,6 +111,12 @@ public class DeadCodeDetection extends MethodAnalysis {
                             worklist.offer(s.getDefaultTarget());
                         }
                     }
+                } else {
+                    cfg.getSuccsOf(stmt).forEach(successor -> {
+                        if (!visited_node.contains(successor) && !worklist.contains(successor)) {
+                            worklist.offer(successor);
+                        }
+                    });
                 }
             } else {
                 // dead Assignment
