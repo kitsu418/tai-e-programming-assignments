@@ -25,15 +25,11 @@ package pascal.taie.analysis.dataflow.analysis.constprop;
 import pascal.taie.analysis.dataflow.analysis.AbstractDataflowAnalysis;
 import pascal.taie.analysis.graph.cfg.CFG;
 import pascal.taie.config.AnalysisConfig;
-import pascal.taie.ir.IR;
 import pascal.taie.ir.exp.*;
 import pascal.taie.ir.stmt.DefinitionStmt;
 import pascal.taie.ir.stmt.Stmt;
 import pascal.taie.language.type.PrimitiveType;
 import pascal.taie.language.type.Type;
-import pascal.taie.util.AnalysisException;
-
-import java.util.Map;
 
 public class ConstantPropagation extends AbstractDataflowAnalysis<Stmt, CPFact> {
 
@@ -50,7 +46,6 @@ public class ConstantPropagation extends AbstractDataflowAnalysis<Stmt, CPFact> 
 
     @Override
     public CPFact newBoundaryFact(CFG<Stmt> cfg) {
-        // TODO - finish me
         CPFact fact = newInitialFact();
         cfg.getIR().getParams().forEach(var -> {
             if (canHoldInt(var)) {
@@ -62,23 +57,18 @@ public class ConstantPropagation extends AbstractDataflowAnalysis<Stmt, CPFact> 
 
     @Override
     public CPFact newInitialFact() {
-        // TODO - finish me
         return new CPFact();
     }
 
     @Override
     public void meetInto(CPFact fact, CPFact target) {
-        // TODO - finish me
-        fact.forEach((var, value) -> {
-            target.update(var, meetValue(value, target.get(var)));
-        });
+        fact.forEach((var, value) -> target.update(var, meetValue(value, target.get(var))));
     }
 
     /**
      * Meets two Values.
      */
     public Value meetValue(Value v1, Value v2) {
-        // TODO - finish me
         if (v1.isConstant() && v2.isConstant()) {
             return v1.equals(v2) ? v1 : Value.getNAC();
         } else if (v1.isUndef()) {
@@ -92,7 +82,6 @@ public class ConstantPropagation extends AbstractDataflowAnalysis<Stmt, CPFact> 
 
     @Override
     public boolean transferNode(Stmt stmt, CPFact in, CPFact out) {
-        // TODO - finish me
         if (stmt instanceof DefinitionStmt<?, ?> st) {
             if (st.getLValue() instanceof Var var && canHoldInt(var)) {
                 RValue exp = ((DefinitionStmt<?, ?>) stmt).getRValue();
@@ -132,7 +121,6 @@ public class ConstantPropagation extends AbstractDataflowAnalysis<Stmt, CPFact> 
      * @return the resulting {@link Value}
      */
     public static Value evaluate(Exp exp, CPFact in) {
-        // TODO - finish me
         if (exp instanceof BinaryExp b) {
             Var operand1 = b.getOperand1();
             Var operand2 = b.getOperand2();
