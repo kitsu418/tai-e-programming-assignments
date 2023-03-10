@@ -68,7 +68,7 @@ public class DeadCodeDetection extends MethodAnalysis {
         worklist.offer(cfg.getEntry());
         while (!worklist.isEmpty()) {
             stmt = worklist.remove();
-            if (!deadCode.contains(stmt) && !visited_node.add(stmt)) {
+            if (!visited_node.add(stmt)) {
                 continue;
             }
             // unreachable code, if case
@@ -79,17 +79,11 @@ public class DeadCodeDetection extends MethodAnalysis {
                     cfg.getOutEdgesOf(stmt).forEach(branch -> {
                         if ((branch.getKind() == Edge.Kind.IF_TRUE && condition_value == 1)
                                 || (branch.getKind() == Edge.Kind.IF_FALSE && condition_value == 0)) {
-                            if (!visited_node.contains(branch.getTarget()) && !worklist.contains(branch.getTarget())) {
-                                worklist.offer(branch.getTarget());
-                            }
+                            worklist.offer(branch.getTarget());
                         }
                     });
                 } else {
-                    cfg.getSuccsOf(stmt).forEach(successor -> {
-                        if (!visited_node.contains(successor) && !worklist.contains(successor)) {
-                            worklist.offer(successor);
-                        }
-                    });
+                    worklist.addAll(cfg.getSuccsOf(stmt));
                 }
                 // unreachable code, switch case
             } else if (stmt instanceof SwitchStmt s) {
@@ -102,37 +96,21 @@ public class DeadCodeDetection extends MethodAnalysis {
                             match_case = branch.getTarget();
                         }
                     }
-                    if (match_case != null) {
-                        if (!visited_node.contains(match_case) && !worklist.contains(match_case)) {
-                            worklist.offer(match_case);
-                        }
-                    } else {
-                        if (!visited_node.contains(s.getDefaultTarget()) && !worklist.contains(s.getDefaultTarget())) {
-                            worklist.offer(s.getDefaultTarget());
-                        }
-                    }
+                    worklist.offer(match_case != null ? match_case : s.getDefaultTarget());
                 } else {
-                    cfg.getSuccsOf(stmt).forEach(successor -> {
-                        if (!visited_node.contains(successor) && !worklist.contains(successor)) {
-                            worklist.offer(successor);
-                        }
-                    });
+                    worklist.addAll(cfg.getSuccsOf(s));
                 }
             } else {
                 // dead Assignment
                 if (stmt instanceof DefinitionStmt<?, ?> d) {
-                    if ((d instanceof AssignStmt<?, ?> || (d instanceof Invoke && hasNoSideEffect(d.getRValue())))
+                    if (d instanceof AssignStmt<?, ?> && hasNoSideEffect(d.getRValue())
                             && d.getLValue() instanceof Var v) {
-                        if (!liveVars.getOutFact(stmt).contains(v)) {
+                        if (!liveVars.getResult(stmt).contains(v)) {
                             deadCode.add(stmt);
                         }
                     }
                 }
-                cfg.getSuccsOf(stmt).forEach(successor -> {
-                    if (!visited_node.contains(successor) && !worklist.contains(successor)) {
-                        worklist.offer(successor);
-                    }
-                });
+                worklist.addAll(cfg.getSuccsOf(stmt));
             }
         }
         cfg.getNodes().forEach(node -> {
