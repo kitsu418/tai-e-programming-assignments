@@ -1,0 +1,17 @@
+-------------------- <NotDead: void <init>()> (deadcode) --------------------
+
+-------------------- <NotDead: void foo(int,int)> (deadcode) --------------------
+[1@L5] goto 5;
+[2@L5] nop;
+[3@L6] a = 0;
+[4@L5] goto 7;
+[5@L5] nop;
+[6@L8] a = 1;
+[7@L8] nop;
+[8@L10] invokevirtual %this.<NotDead: void use(int)>(a);
+[9@L10] return;
+
+-------------------- <NotDead: int bar()> (deadcode) --------------------
+
+-------------------- <NotDead: void use(int)> (deadcode) --------------------
+
