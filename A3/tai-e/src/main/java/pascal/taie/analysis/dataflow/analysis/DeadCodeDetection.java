@@ -60,6 +60,10 @@ public class DeadCodeDetection extends MethodAnalysis {
         Set<Stmt> deadCode = new TreeSet<>(Comparator.comparing(Stmt::getIndex));
         // TODO - finish me
         // Your task is to recognize dead code in ir and add it to deadCode
+        for (Stmt stmt : cfg.getNodes()) {
+            System.out.printf("#%d: %s, in: %s, out: %s\n", stmt.getLineNumber(), stmt, liveVars.getInFact(stmt), liveVars.getOutFact(stmt));
+        }
+
         boolean[] visited = new boolean[cfg.getNodes().size()];
         Stmt entry = cfg.getEntry();
         Stmt stmt;
@@ -71,13 +75,8 @@ public class DeadCodeDetection extends MethodAnalysis {
                 continue;
             }
             visited[stmt.getIndex()] = true;
-            // dead Assignment
-            if (stmt instanceof AssignStmt<?, ?> a && a.getLValue() instanceof Var v) {
-                if (!liveVars.getInFact(stmt).contains(v)) {
-                    deadCode.add(stmt);
-                }
-                // unreachable code, if case
-            } else if (stmt instanceof If i) {
+            // unreachable code, if case
+            if (stmt instanceof If i) {
                 ConditionExp condition = i.getCondition();
                 if (constants.getInFact(stmt).get(condition.getOperand1()).isConstant()
                         && constants.getInFact(stmt).get(condition.getOperand2()).isConstant()) {
@@ -125,6 +124,12 @@ public class DeadCodeDetection extends MethodAnalysis {
                     }
                 }
             } else {
+                // dead Assignment
+                if (stmt instanceof AssignStmt<?, ?> a && a.getLValue() instanceof Var v) {
+                    if (!liveVars.getOutFact(stmt).contains(v)) {
+                        deadCode.add(stmt);
+                    }
+                }
                 cfg.getSuccsOf(stmt).forEach(successor -> {
                     if (!visited[successor.getIndex()] && !worklist.contains(successor)) {
                         worklist.offer(successor);
