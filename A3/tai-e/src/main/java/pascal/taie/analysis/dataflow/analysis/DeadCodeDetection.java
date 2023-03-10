@@ -125,9 +125,12 @@ public class DeadCodeDetection extends MethodAnalysis {
                 }
             } else {
                 // dead Assignment
-                if (stmt instanceof AssignStmt<?, ?> a && a.getLValue() instanceof Var v) {
-                    if (!liveVars.getOutFact(stmt).contains(v)) {
-                        deadCode.add(stmt);
+                if (stmt instanceof DefinitionStmt<?, ?> d) {
+                    if ((d instanceof AssignStmt<?, ?> || (d instanceof Invoke && hasNoSideEffect(d.getRValue())))
+                            && d.getLValue() instanceof Var v) {
+                        if (!liveVars.getOutFact(stmt).contains(v)) {
+                            deadCode.add(stmt);
+                        }
                     }
                 }
                 cfg.getSuccsOf(stmt).forEach(successor -> {
@@ -142,6 +145,8 @@ public class DeadCodeDetection extends MethodAnalysis {
                 deadCode.add(node);
             }
         });
+
+        System.out.println(deadCode);
         return deadCode;
     }
 
