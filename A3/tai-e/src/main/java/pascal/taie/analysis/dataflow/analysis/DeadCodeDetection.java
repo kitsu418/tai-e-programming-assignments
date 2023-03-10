@@ -63,37 +63,24 @@ public class DeadCodeDetection extends MethodAnalysis {
         for (Stmt stmt : cfg.getNodes()) {
             System.out.printf("#%d: %s, in: %s, out: %s\n", stmt.getLineNumber(), stmt, liveVars.getInFact(stmt), liveVars.getOutFact(stmt));
         }
-
-        boolean[] visited = new boolean[cfg.getNodes().size()];
-        Stmt entry = cfg.getEntry();
+        Set<Stmt> visited_node = new TreeSet<>(Comparator.comparing(Stmt::getIndex));
         Stmt stmt;
         Queue<Stmt> worklist = new LinkedList<>();
-        worklist.offer(entry);
+        worklist.offer(cfg.getEntry());
         while (!worklist.isEmpty()) {
             stmt = worklist.remove();
-            if (visited[stmt.getIndex()]) {
+            if (!deadCode.contains(stmt) && !visited_node.add(stmt)) {
                 continue;
             }
-            visited[stmt.getIndex()] = true;
             // unreachable code, if case
-            if (stmt instanceof If i) {
-                ConditionExp condition = i.getCondition();
-                if (constants.getInFact(stmt).get(condition.getOperand1()).isConstant()
-                        && constants.getInFact(stmt).get(condition.getOperand2()).isConstant()) {
-                    int operand1 = constants.getInFact(stmt).get(condition.getOperand1()).getConstant();
-                    int operand2 = constants.getInFact(stmt).get(condition.getOperand2()).getConstant();
-                    boolean condition_value = switch (condition.getOperator()) {
-                        case NE -> operand1 != operand2;
-                        case LT -> operand1 < operand2;
-                        case LE -> operand1 <= operand2;
-                        case GT -> operand1 > operand2;
-                        case GE -> operand1 >= operand2;
-                        case EQ -> operand1 == operand2;
-                    };
+            if (stmt instanceof If s) {
+                Value condition = ConstantPropagation.evaluate(s.getCondition(), constants.getInFact(s));
+                if (condition.isConstant()) {
+                    int condition_value = condition.getConstant();
                     cfg.getOutEdgesOf(stmt).forEach(branch -> {
-                        if ((branch.getKind() == Edge.Kind.IF_TRUE && condition_value)
-                                || (branch.getKind() == Edge.Kind.IF_FALSE && !condition_value)) {
-                            if (!visited[branch.getTarget().getIndex()] && !worklist.contains(branch.getTarget())) {
+                        if ((branch.getKind() == Edge.Kind.IF_TRUE && condition_value == 1)
+                                || (branch.getKind() == Edge.Kind.IF_FALSE && condition_value == 0)) {
+                            if (!visited_node.contains(branch.getTarget()) && !worklist.contains(branch.getTarget())) {
                                 worklist.offer(branch.getTarget());
                             }
                         }
@@ -101,25 +88,22 @@ public class DeadCodeDetection extends MethodAnalysis {
                 }
                 // unreachable code, switch case
             } else if (stmt instanceof SwitchStmt s) {
-                Var condition = s.getVar();
-                if (constants.getInFact(stmt).get(condition).isConstant()) {
-                    int condition_value = constants.getInFact(stmt).get(condition).getConstant();
+                Value condition = ConstantPropagation.evaluate(s.getVar(), constants.getInFact(s));
+                if (condition.isConstant()) {
+                    int condition_value = condition.getConstant();
                     Stmt match_case = null;
-                    Stmt default_case = null;
                     for (Edge<Stmt> branch : cfg.getOutEdgesOf(stmt)) {
                         if (branch.getKind() == Edge.Kind.SWITCH_CASE && branch.getCaseValue() == condition_value) {
                             match_case = branch.getTarget();
-                        } else if (branch.getKind() == Edge.Kind.SWITCH_DEFAULT) {
-                            default_case = branch.getTarget();
                         }
                     }
                     if (match_case != null) {
-                        if (!visited[match_case.getIndex()] && !worklist.contains(match_case)) {
+                        if (!visited_node.contains(match_case) && !worklist.contains(match_case)) {
                             worklist.offer(match_case);
                         }
-                    } else if (default_case != null) {
-                        if (!visited[default_case.getIndex()] && !worklist.contains(default_case)) {
-                            worklist.offer(default_case);
+                    } else {
+                        if (!visited_node.contains(s.getDefaultTarget()) && !worklist.contains(s.getDefaultTarget())) {
+                            worklist.offer(s.getDefaultTarget());
                         }
                     }
                 }
@@ -134,18 +118,18 @@ public class DeadCodeDetection extends MethodAnalysis {
                     }
                 }
                 cfg.getSuccsOf(stmt).forEach(successor -> {
-                    if (!visited[successor.getIndex()] && !worklist.contains(successor)) {
+                    if (!visited_node.contains(successor) && !worklist.contains(successor)) {
                         worklist.offer(successor);
                     }
                 });
             }
         }
         cfg.getNodes().forEach(node -> {
-            if (!visited[node.getIndex()]) {
+            if (!visited_node.contains(node)) {
                 deadCode.add(node);
             }
         });
-
+        deadCode.remove(cfg.getExit());
         System.out.println(deadCode);
         return deadCode;
     }
