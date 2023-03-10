@@ -24,43 +24,52 @@ package pascal.taie.analysis.dataflow.analysis;
 
 import org.junit.Test;
 import pascal.taie.analysis.Tests;
+import pascal.taie.analysis.dataflow.analysis.constprop.ConstantPropagation;
 
-public class DeadCodeTest {
+public class CPTest {
 
-    void testDCD(String inputClass) {
-        Tests.test(inputClass, "src/test/resources/dataflow/deadcode/",
-                DeadCodeDetection.ID,
-                "-a", "livevar=strongly:false",
-                "-a", "constprop=edge-refine:false");
+    void testCP(String inputClass) {
+        Tests.test(inputClass, "src/test/resources/dataflow/constprop/",
+                ConstantPropagation.ID, "edge-refine:false");
     }
 
     @Test
-    public void testControlFlowUnreachable() {
-        testDCD("ControlFlowUnreachable");
+    public void testAssign() {
+        testCP("Assign");
     }
 
     @Test
-    public void testUnreachableIfBranch() {
-        testDCD("UnreachableIfBranch");
+    public void testSimpleConstant() {
+        testCP("SimpleConstant");
     }
 
     @Test
-    public void testUnreachableSwitchBranch() {
-        testDCD("UnreachableSwitchBranch");
+    public void testSimpleBinary() {
+        testCP("SimpleBinary");
     }
 
     @Test
-    public void testDeadAssignment() {
-        testDCD("DeadAssignment");
+    public void testSimpleBranch() {
+        testCP("SimpleBranch");
     }
 
     @Test
-    public void testLoops() {
-        testDCD("Loops");
+    public void testSimpleChar() {
+        testCP("SimpleChar");
     }
 
     @Test
-    public void testNotDead() {
-        testDCD("NotDead");
+    public void testBranchConstant() {
+        testCP("BranchConstant");
+    }
+
+    @Test
+    public void testInterprocedural() {
+        testCP("Interprocedural");
+    }
+
+    @Test
+    public void testLoop() {
+        testCP("Loop");
     }
 }

@@ -25,42 +25,40 @@ package pascal.taie.analysis.dataflow.analysis;
 import org.junit.Test;
 import pascal.taie.analysis.Tests;
 
-public class DeadCodeTest {
+public class LiveVarTest {
 
-    void testDCD(String inputClass) {
-        Tests.test(inputClass, "src/test/resources/dataflow/deadcode/",
-                DeadCodeDetection.ID,
-                "-a", "livevar=strongly:false",
-                "-a", "constprop=edge-refine:false");
+    void testLV(String inputClass) {
+        Tests.test(inputClass, "src/test/resources/dataflow/livevar",
+                LiveVariableAnalysis.ID, "strongly:false");
     }
 
     @Test
-    public void testControlFlowUnreachable() {
-        testDCD("ControlFlowUnreachable");
+    public void testAssign() {
+        testLV("Assign");
     }
 
     @Test
-    public void testUnreachableIfBranch() {
-        testDCD("UnreachableIfBranch");
+    public void testBranch() {
+        testLV("Branch");
     }
 
     @Test
-    public void testUnreachableSwitchBranch() {
-        testDCD("UnreachableSwitchBranch");
+    public void testBranchLoop() {
+        testLV("BranchLoop");
     }
 
     @Test
-    public void testDeadAssignment() {
-        testDCD("DeadAssignment");
+    public void Array() {
+        testLV("Array");
     }
 
     @Test
-    public void testLoops() {
-        testDCD("Loops");
+    public void Fibonacci() {
+        testLV("Fibonacci");
     }
 
     @Test
-    public void testNotDead() {
-        testDCD("NotDead");
+    public void Reference() {
+        testLV("Reference");
     }
 }
