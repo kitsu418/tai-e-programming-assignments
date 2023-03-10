@@ -33,21 +33,10 @@ import pascal.taie.analysis.graph.cfg.CFGBuilder;
 import pascal.taie.analysis.graph.cfg.Edge;
 import pascal.taie.config.AnalysisConfig;
 import pascal.taie.ir.IR;
-import pascal.taie.ir.exp.ArithmeticExp;
-import pascal.taie.ir.exp.ArrayAccess;
-import pascal.taie.ir.exp.CastExp;
-import pascal.taie.ir.exp.FieldAccess;
-import pascal.taie.ir.exp.NewExp;
-import pascal.taie.ir.exp.RValue;
-import pascal.taie.ir.exp.Var;
-import pascal.taie.ir.stmt.AssignStmt;
-import pascal.taie.ir.stmt.If;
-import pascal.taie.ir.stmt.Stmt;
-import pascal.taie.ir.stmt.SwitchStmt;
+import pascal.taie.ir.exp.*;
+import pascal.taie.ir.stmt.*;
 
-import java.util.Comparator;
-import java.util.Set;
-import java.util.TreeSet;
+import java.util.*;
 
 public class DeadCodeDetection extends MethodAnalysis {
 
@@ -71,6 +60,83 @@ public class DeadCodeDetection extends MethodAnalysis {
         Set<Stmt> deadCode = new TreeSet<>(Comparator.comparing(Stmt::getIndex));
         // TODO - finish me
         // Your task is to recognize dead code in ir and add it to deadCode
+        boolean[] visited = new boolean[cfg.getNodes().size()];
+        Stmt entry = cfg.getEntry();
+        Stmt stmt;
+        Queue<Stmt> worklist = new LinkedList<>();
+        worklist.offer(entry);
+        while (!worklist.isEmpty()) {
+            stmt = worklist.remove();
+            if (visited[stmt.getIndex()]) {
+                continue;
+            }
+            visited[stmt.getIndex()] = true;
+            // dead Assignment
+            if (stmt instanceof AssignStmt<?, ?> a && a.getLValue() instanceof Var v) {
+                if (!liveVars.getInFact(stmt).contains(v)) {
+                    deadCode.add(stmt);
+                }
+                // unreachable code, if case
+            } else if (stmt instanceof If i) {
+                ConditionExp condition = i.getCondition();
+                if (constants.getInFact(stmt).get(condition.getOperand1()).isConstant()
+                        && constants.getInFact(stmt).get(condition.getOperand2()).isConstant()) {
+                    int operand1 = constants.getInFact(stmt).get(condition.getOperand1()).getConstant();
+                    int operand2 = constants.getInFact(stmt).get(condition.getOperand2()).getConstant();
+                    boolean condition_value = switch (condition.getOperator()) {
+                        case NE -> operand1 != operand2;
+                        case LT -> operand1 < operand2;
+                        case LE -> operand1 <= operand2;
+                        case GT -> operand1 > operand2;
+                        case GE -> operand1 >= operand2;
+                        case EQ -> operand1 == operand2;
+                    };
+                    cfg.getOutEdgesOf(stmt).forEach(branch -> {
+                        if ((branch.getKind() == Edge.Kind.IF_TRUE && condition_value)
+                                || (branch.getKind() == Edge.Kind.IF_FALSE && !condition_value)) {
+                            if (!visited[branch.getTarget().getIndex()] && !worklist.contains(branch.getTarget())) {
+                                worklist.offer(branch.getTarget());
+                            }
+                        }
+                    });
+                }
+                // unreachable code, switch case
+            } else if (stmt instanceof SwitchStmt s) {
+                Var condition = s.getVar();
+                if (constants.getInFact(stmt).get(condition).isConstant()) {
+                    int condition_value = constants.getInFact(stmt).get(condition).getConstant();
+                    Stmt match_case = null;
+                    Stmt default_case = null;
+                    for (Edge<Stmt> branch : cfg.getOutEdgesOf(stmt)) {
+                        if (branch.getKind() == Edge.Kind.SWITCH_CASE && branch.getCaseValue() == condition_value) {
+                            match_case = branch.getTarget();
+                        } else if (branch.getKind() == Edge.Kind.SWITCH_DEFAULT) {
+                            default_case = branch.getTarget();
+                        }
+                    }
+                    if (match_case != null) {
+                        if (!visited[match_case.getIndex()] && !worklist.contains(match_case)) {
+                            worklist.offer(match_case);
+                        }
+                    } else if (default_case != null) {
+                        if (!visited[default_case.getIndex()] && !worklist.contains(default_case)) {
+                            worklist.offer(default_case);
+                        }
+                    }
+                }
+            } else {
+                cfg.getSuccsOf(stmt).forEach(successor -> {
+                    if (!visited[successor.getIndex()] && !worklist.contains(successor)) {
+                        worklist.offer(successor);
+                    }
+                });
+            }
+        }
+        cfg.getNodes().forEach(node -> {
+            if (!visited[node.getIndex()]) {
+                deadCode.add(node);
+            }
+        });
         return deadCode;
     }
 
