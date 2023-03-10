@@ -23,21 +23,11 @@
 package pascal.taie.analysis.dataflow.solver;
 
 import pascal.taie.analysis.dataflow.analysis.DataflowAnalysis;
-import pascal.taie.analysis.dataflow.analysis.constprop.CPFact;
-import pascal.taie.analysis.dataflow.analysis.constprop.ConstantPropagation;
-import pascal.taie.analysis.dataflow.analysis.constprop.Value;
 import pascal.taie.analysis.dataflow.fact.DataflowResult;
-import pascal.taie.analysis.dataflow.fact.MapFact;
 import pascal.taie.analysis.graph.cfg.CFG;
-import pascal.taie.ir.exp.IntLiteral;
-import pascal.taie.ir.exp.Var;
-import pascal.taie.ir.stmt.Stmt;
 
-import java.util.Arrays;
-import java.util.Collections;
 import java.util.LinkedList;
 import java.util.Queue;
-import java.util.Map;
 
 class WorkListSolver<Node, Fact> extends Solver<Node, Fact> {
 
@@ -47,26 +37,19 @@ class WorkListSolver<Node, Fact> extends Solver<Node, Fact> {
 
     @Override
     protected void doSolveForward(CFG<Node> cfg, DataflowResult<Node, Fact> result) {
-        // TODO - finish me
-        Queue<Node> worklist = new LinkedList<Node>(cfg.getNodes());
+        Queue<Node> worklist = new LinkedList<>(cfg.getNodes());
         Node node;
-        if (analysis instanceof ConstantPropagation) {
-            CPFact in;
-            while (!worklist.isEmpty()) {
-                node = worklist.remove();
-                System.out.printf("#%s(before): %s, in: %s, out: %s, %s\n", ((Stmt) node).getLineNumber(), node, result.getInFact(node), result.getOutFact(node), ((Stmt) node).getDef().isPresent() ? ((Stmt) node).getDef().get() : null);
-                ((CPFact) result.getInFact(node)).clear();
-                for (Node predecessor : cfg.getPredsOf(node)) {
-                    ((ConstantPropagation) analysis).meetInto((CPFact) result.getOutFact(predecessor), (CPFact) result.getInFact(node));
-                }
-                if (analysis.transferNode(node, result.getInFact(node), result.getOutFact(node))) {
-                    cfg.getSuccsOf(node).forEach(successor -> {
-                        if (!worklist.contains(successor)) {
-                            worklist.offer(successor);
-                        }
-                    });
-                }
-                System.out.printf("#%s(after): %s, in: %s, out: %s, %s\n", ((Stmt) node).getLineNumber(), node, result.getInFact(node), result.getOutFact(node), ((Stmt) node).getDef().isPresent() ? ((Stmt) node).getDef().get() : null);
+        while (!worklist.isEmpty()) {
+            node = worklist.remove();
+            for (Node predecessor : cfg.getPredsOf(node)) {
+                analysis.meetInto(result.getOutFact(predecessor), result.getInFact(node));
+            }
+            if (analysis.transferNode(node, result.getInFact(node), result.getOutFact(node))) {
+                cfg.getSuccsOf(node).forEach(successor -> {
+                    if (!worklist.contains(successor)) {
+                        worklist.offer(successor);
+                    }
+                });
             }
         }
     }
